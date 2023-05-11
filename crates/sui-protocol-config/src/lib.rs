@@ -37,7 +37,8 @@ const MAX_PROTOCOL_VERSION: u64 = 12;
 //            `max_meter_ticks_per_module` limits each from 6_000_000 to 16_000_000. sui-system
 //            framework changes.
 // Version 11: Introduce `std::type_name::get_with_original_ids` to the system frameworks.
-// Version 12: Changes to deepbook in framework to add API for querying marketplace.
+// Version 12: Changes to deepbook in framework to add API for querying marketplace. Changes to
+//             sui-system to add PTB-friendly unstake function.
 
 #[derive(Copy, Clone, Debug, Hash, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ProtocolVersion(u64);
