@@ -4,6 +4,7 @@
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
+use std::sync::RwLock;
 use std::time::Duration;
 use std::{collections::HashMap, fs, pin::Pin, sync::Arc};
 
@@ -23,6 +24,7 @@ use prometheus::{
     register_int_gauge_vec_with_registry, register_int_gauge_with_registry, Histogram, IntCounter,
     IntCounterVec, IntGauge, IntGaugeVec, Registry,
 };
+use reqwest::Client;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use sui_config::node::StateDebugDumpConfig;
@@ -126,7 +128,7 @@ use crate::module_cache_metrics::ResolverMetrics;
 use crate::stake_aggregator::StakeAggregator;
 use crate::state_accumulator::StateAccumulator;
 use crate::{transaction_input_checker, transaction_manager::TransactionManager};
-
+use once_cell::sync::Lazy;
 #[cfg(test)]
 #[cfg(feature = "test-utils")]
 #[path = "unit_tests/authority_tests.rs"]
@@ -164,6 +166,31 @@ pub(crate) mod authority_notify_read;
 pub(crate) mod authority_store;
 
 pub static CHAIN_IDENTIFIER: OnceCell<ChainIdentifier> = OnceCell::new();
+
+/// A default Google JWK raw response bytes from https://www.googleapis.com/oauth2/v2/certs
+/// retrieved on 05/23/2023.
+pub static DEFAULT_GOOGLE_JWK_BYTES: Lazy<Vec<u8>> = Lazy::new(|| {
+    r#"{
+        "keys": [
+          {
+            "e": "AQAB",
+            "kty": "RSA",
+            "kid": "822838c1c8bf9edcf1f5050662e54bcb1adb5b5f",
+            "alg": "RS256",
+            "n": "vwoDsDX87o_8xf6IOtIK92rkKfBLlcYhSbtNP5CgTTEmPVy5g-_1Jv4iItLc4jq3rGgDM6kvniczOUrzBVxTftW6womYaDq2_AQathzLUrSPTs9RsxPUWUUBOeFbBtE-KaAtP97nYkqFD0em2EiRhnLYa3SyClCtWCUx60Aw_0NkiGZFuYXG7jkcYQ_8TZMZdBUC08_rtHpsOfzUetA3DvJ8lkfRSwbCf8GkT5ksFzCyXrYDmWJEGVNTPNYZVuVlfHuT6-abeTcSuPvUYYOL0qWbfq8B-imQ7mF4afBAQkWiKyRSM4iE2CC4MOHOjkKFIDeX5ahpeTSXdVGpYTnPiw==",
+            "use": "sig"
+          },
+          {
+            "use": "sig",
+            "e": "AQAB",
+            "alg": "RS256",
+            "kid": "2d9a5ef5b12623c91671a7093cb323333cd07d09",
+            "n": "0NDRXWtH6_HnmuSuTAisgYVZ3Z67PQjHbRFz4XNYuD95BKx0wQr0GWOi_UCGLfI0col3i6J3_AF-b1YrTFTMEr_bL8CYDdK2CYLcGUzc5bLRDAySsqnKdlhWkneqfFdr3J66mHu11KUaIIRWiLsCkR9QFF-8o2PtZzv3F-3Uh7L4q7i_Evs1s7SJlO0OAnI4ew4rP2HbRaO0Q2zK0DL_d1eoAC72apQuEzz-2aXfQ-QYSTlVK74McBhP1MRtgD6zGF2lwg4uhgb55fDDQQh0VHWQSxwbvAL0Oox69zzpkFgpjJAJUqaxegzETU1jf3iKs1vyFIB0C4N-Jr__zwLQZw==",
+            "kty": "RSA"
+          }
+        ]
+      }"#.as_bytes().to_vec()
+});
 
 pub type ReconfigConsensusMessage = (
     AuthorityKeyPair,
@@ -548,6 +575,9 @@ pub struct AuthorityState {
 
     /// Config for state dumping on forks
     debug_dump_config: StateDebugDumpConfig,
+
+    /// A serialized bytes array value of the Google JWK HTTP response.
+    google_jwk_as_bytes: Arc<RwLock<Vec<u8>>>,
 }
 
 /// The authority state encapsulates all state, drives execution, and ensures safety.
@@ -567,6 +597,52 @@ impl AuthorityState {
 
     pub fn committee_store(&self) -> &Arc<CommitteeStore> {
         &self.committee_store
+    }
+
+    pub fn get_google_jwk_as_bytes(&self) -> Vec<u8> {
+        match self.google_jwk_as_bytes.read() {
+            Ok(google_jwk_as_bytes) => google_jwk_as_bytes.clone(),
+            Err(_) => (*DEFAULT_GOOGLE_JWK_BYTES.clone()).to_vec(),
+        }
+    }
+
+    pub fn start_jwk_updater(self: Arc<Self>) {
+        debug!("Starting JWK updater thread for authority");
+        // other ideas to not pass jwk everywhere: pointer to the jwk object
+        // put jwk in a global instance and only access in zk login verify generic
+        tokio::task::spawn(async move {
+            loop {
+                // Update the JWK value in the authority server
+                let res = self.update_google_jwk().await;
+                if let Err(e) = res {
+                    debug!("Error when fetching JWK {:?}", e);
+                }
+                // Sleep for 1 hour
+                tokio::time::sleep(Duration::from_secs(3600)).await;
+            }
+        });
+    }
+
+    async fn update_google_jwk(&self) -> Result<(), SuiError> {
+        let client = Client::new();
+        let response = client
+            .get("https://www.googleapis.com/oauth2/v2/certs")
+            .send()
+            .await
+            .map_err(|_| SuiError::JWKRetrievalError)?;
+        let bytes = response
+            .bytes()
+            .await
+            .map_err(|_| SuiError::JWKRetrievalError)?;
+        let mut jwk = self
+            .google_jwk_as_bytes
+            .write()
+            .map_err(|_| SuiError::JWKRetrievalError)?;
+        if jwk.to_vec() != bytes.to_vec() {
+            info!("New JWK value detected, updating...");
+            *jwk = bytes.to_vec();
+        }
+        Ok(())
     }
 
     pub fn clone_committee_store(&self) -> Arc<CommitteeStore> {
@@ -1943,6 +2019,9 @@ impl AuthorityState {
             transaction_deny_config,
             certificate_deny_config,
             debug_dump_config,
+            google_jwk_as_bytes: Arc::new(RwLock::new(
+                (*DEFAULT_GOOGLE_JWK_BYTES.clone()).to_vec(),
+            )),
         });
 
         // Start a task to execute ready certificates.
@@ -1958,6 +2037,7 @@ impl AuthorityState {
             .create_owner_index_if_empty(genesis_objects, &epoch_store)
             .expect("Error indexing genesis objects.");
 
+        state.clone().start_jwk_updater();
         state
     }
 
