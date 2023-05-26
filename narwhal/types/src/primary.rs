@@ -37,7 +37,7 @@ use std::{
     time::{Duration, SystemTime},
 };
 use sui_protocol_config::ProtocolConfig;
-use tracing::warn;
+use tracing::{debug, warn};
 
 /// The round number.
 pub type Round = u64;
@@ -151,8 +151,10 @@ impl Batch {
     pub fn new(transactions: Vec<Transaction>, protocol_config: &ProtocolConfig) -> Self {
         // TODO: Remove once we have upgraded to protocol version 11.
         if protocol_config.narwhal_versioned_metadata() {
+            debug!("Protocol is v12 and we are using BatchV2");
             Self::V2(BatchV2::new(transactions, protocol_config))
         } else {
+            debug!("Protocol has not upgraded and we are using BatchV1");
             Self::V1(BatchV1::new(transactions))
         }
     }

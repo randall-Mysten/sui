@@ -756,6 +756,10 @@ impl SuiNode {
             .address;
         let worker_cache = new_epoch_start_state.get_narwhal_worker_cache(transactions_addr);
 
+        info!(
+            "Starting narwhal with protocol version {:?}",
+            epoch_store.protocol_config().version,
+        );
         narwhal_manager
             .start(
                 new_epoch_start_state.get_narwhal_committee(),
@@ -844,6 +848,11 @@ impl SuiNode {
         };
 
         let metrics = NarwhalManagerMetrics::new(&registry_service.default_registry());
+
+        info!(
+            "Constructing narwhal manager with protocol version {:?}",
+            protocol_config.version
+        );
 
         Ok(NarwhalManager::new(
             narwhal_config,
