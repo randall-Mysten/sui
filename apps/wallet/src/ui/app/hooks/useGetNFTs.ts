@@ -12,8 +12,6 @@ import {
     type SuiObjectResponse,
 } from '@mysten/sui.js';
 
-import useAppSelector from './useAppSelector';
-
 const hasDisplayData = (obj: SuiObjectResponse) => !!getObjectDisplay(obj).data;
 
 export function useGetNFTs(address?: SuiAddress | null) {
@@ -33,9 +31,7 @@ export function useGetNFTs(address?: SuiAddress | null) {
         },
         50
     );
-    const { apiEnv } = useAppSelector((state) => state.app);
-
-    const shouldFetchKioskContents = apiEnv === 'mainnet';
+    const shouldFetchKioskContents = false;
     const { data: obKioskContents, isLoading: areKioskContentsLoading } =
         useGetOriginByteKioskContents(address, !shouldFetchKioskContents);
 
