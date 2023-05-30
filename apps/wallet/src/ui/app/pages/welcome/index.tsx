@@ -11,6 +11,8 @@ import Loading from '_components/loading';
 import Logo from '_components/logo';
 import { useInitializedGuard } from '_hooks';
 import PageLayout from '_pages/layout';
+import { useEffect } from 'react';
+import { ampli } from '_src/shared/ampli';
 
 const VALUE_PROP = [
     'Send, receive tokens and NFTs',
@@ -22,6 +24,9 @@ const VALUE_PROP = [
 
 const WelcomePage = () => {
     const checkingInitialized = useInitializedGuard(false);
+    useEffect(() => {
+        // ampli.track(new Event('fd'));
+    }, []);
     return (
         <PageLayout forceFullscreen={true}>
             <Loading loading={checkingInitialized}>

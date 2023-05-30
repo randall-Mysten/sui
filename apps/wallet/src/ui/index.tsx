@@ -4,7 +4,7 @@
 import { GrowthBookProvider } from '@growthbook/growthbook-react';
 import { RpcClientContext } from '@mysten/core';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
-import { Fragment, StrictMode } from 'react';
+import { Fragment, StrictMode, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Provider } from 'react-redux';
 import { HashRouter } from 'react-router-dom';
@@ -26,6 +26,9 @@ import './styles/global.scss';
 import '@fontsource/inter/variable.css';
 import '@fontsource/red-hat-mono/variable.css';
 import 'bootstrap-icons/font/bootstrap-icons.scss';
+
+import * as amplitude from '@amplitude/analytics-browser';
+import { ampli } from '_src/shared/ampli';
 
 async function init() {
     if (process.env.NODE_ENV === 'development') {
@@ -56,6 +59,23 @@ function AppWrapper() {
     const network = useAppSelector(
         ({ app: { apiEnv, customRPC } }) => `${apiEnv}_${customRPC}`
     );
+    const isInitialized = useAppSelector(
+        ({ account }) => account.isInitialized
+    );
+
+    const isAmplitudeInitialized = useRef(false);
+
+    useEffect(() => {
+        if (isInitialized && !isAmplitudeInitialized.current) {
+            console.log('ACCOUT INITIALIZED FIRST ITME');
+            // initAmplitudeWithUniqueTracking();
+            isAmplitudeInitialized.current = true;
+        }
+
+        console.log('INITIALIZED', isInitialized);
+    }, [isInitialized]);
+
+    //
 
     return (
         <GrowthBookProvider growthbook={growthbook}>
@@ -95,5 +115,14 @@ function AppWrapper() {
 (async () => {
     await init();
     initSentry();
+    console.log('INITIALIZING AMPLI WITH AMPLITUDE ANONYMOUSLY');
+    ampli.load({ disabled: false, client: { instance: amplitude } });
+    // initAmplitudeWithAnonymousTracking();
     renderApp();
 })();
+
+/// on page load:
+// initialize Ampli
+// intiialize Amplitude with anonymous tracking
+// track track
+// re-init with unique tracking
