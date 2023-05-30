@@ -76,7 +76,6 @@ export class FlexibleCookieStorage<T> implements Storage<T> {
         // Create an observable? plumb some global on the window? kind of blanking
         const isInitialized = false;
 
-        // Basically,
         if (isInitialized) {
             console.log('WALLET IS INITIALIZED, GOIGN TO COOKIE STORAGE');
             console.log(this.#cookieStorage, this.#memoryStorage.memoryStorage);
