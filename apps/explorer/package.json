@@ -17,12 +17,9 @@
         "preview": "vite preview",
         "storybook": "storybook dev",
         "build-storybook": "storybook build",
-        "pull-amplitude": "ampli pull web && node prependLicense.mjs && prettier -w ampli.json src/utils/ampli/index.ts",
         "preview-storybook": "pnpm dlx serve ./storybook-static"
     },
     "dependencies": {
-        "@amplitude/analytics-browser": "^1.10.3",
-        "@amplitude/analytics-core": "^0.13.3",
         "@floating-ui/react": "^0.23.0",
         "@fontsource/inter": "^4.5.15",
         "@fontsource/red-hat-mono": "^4.5.12",
@@ -71,7 +68,6 @@
         "zod": "^3.21.4"
     },
     "devDependencies": {
-        "@amplitude/ampli": "^1.31.5",
         "@babel/core": "^7.21.4",
         "@playwright/test": "^1.32.3",
         "@storybook/addon-a11y": "7.0.4",
