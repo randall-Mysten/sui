@@ -3,13 +3,14 @@ title: Sui Kiosk
 ---
 
 Sui Kiosk is a primitive, or building block (a module in the Sui Framework), you can use to build a trading platform for digital assets. Sui Kiosk supports adding digital assets that you can store and list for sale to other users. You can also define rules for the kiosk as part of a transfer policy that controls how purchasers can use the asset after purchase. 
-To add digital assets to your kiosk to list for sale, you must first create and publish a package to Sui as part of a programmable transaction block. The package must define a type (T). You can then create a transfer policy (`TransferPolicy`) using the `Publisher` object. The transfer policy determines the conditions that must be met for the purchase to succeed. You can specify different requirements for each asset and transaction. To learn more about transfer policies, see [Transfer Policy](https://github.com/MystenLabs/sui/blob/main/crates/sui-framework/docs/transfer_policy.md). To learn more about using the Publisher object, see [Publisher](https://examples.sui.io/basics/publisher.html) in Sui by Example.
+To add digital assets to your kiosk to list for sale, you must first create and publish a package to Sui as part of a programmable transaction block. The package must define a type (T). You can then create a transfer policy (`TransferPolicy`) using the `Publisher` object. The transfer policy which determines the conditions that must be met for the purchase to succeed. You can specify different requirements for each asset and transaction. To learn more about transfer policies, see [Transfer Policy](https://github.com/MystenLabs/sui/blob/main/crates/sui-framework/docs/transfer_policy.md). To learn more about using the Publisher object, see [Publisher](https://examples.sui.io/basics/publisher.html) in Sui by Example.
 
 To extend and customize Kiosk functionality, Sui Kiosk also supports building extensions that take full advantage of the highly accessible, composable, and dynamic nature of objects on Sui.
 
 ## Sui Kiosk architecture
 
 A Sui Kiosk is a single, typically shared `Kiosk` object. Each `Kiosk` object has a owned capability, `KioskOwnerCap`, to manage it. The `Kiosk` object provides a rich base for building custom extensions, such as creating a marketplace for your digital assets, while maintaining strong security and protected ownership of your assets . 
+
 
 To see all of the properties supported in Sui Kiosk, see [Sui Kiosk](https://github.com/MystenLabs/sui/blob/main/crates/sui-framework/docs/kiosk.md) in the Sui Framework documentation.
 
